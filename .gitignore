@@ -1,3 +1,5 @@
 *.parquet
 .vscode
 .venv
+.env
+*.env
