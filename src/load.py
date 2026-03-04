@@ -2,12 +2,17 @@
 import dotenv
 import os
 import boto3
+import argparse
+from pathlib import Path
 from tqdm import tqdm
 
 dotenv.load_dotenv()
 
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
+
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT/"data"
 
 #%%
 class Load:
@@ -25,7 +30,7 @@ class Load:
     def upload_file(self, filename):
         try:
             self.s3.upload_file(
-                f"../data/{filename}",
+                f"{DATA_DIR}/{filename}",
                 self.bucket_name, 
                 f"{self.bucket_folder}/{filename}"
             )
@@ -34,7 +39,7 @@ class Load:
             print(err)
             return False
 
-        os.remove(f"../data/{self.local_filename}")
+        os.remove(f"{DATA_DIR}/{filename}")
 
         return True
     
@@ -44,12 +49,23 @@ class Load:
         for f in tqdm(files):
             self.upload_file(f)
 # %%
-load = Load(
-    "f1-lake-raw", 
-    "results"
-)
-# %%
-load.proccess_data("../data")
-# %%
-files = os.listdir("../data")
-print(files)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bucket_name", type=str)
+    parser.add_argument("--folder", type=str)
+    args = parser.parse_args()
+
+    if args.bucket_name:
+        print("Iniciando importação dos dados")
+
+        load = Load(
+            args.bucket_name, 
+            args.folder
+        )
+
+        load.proccess_data(DATA_DIR)
+
+        print("Importação dos dados concluída")
+
+    else:
+        print("Sem bucket definido")
