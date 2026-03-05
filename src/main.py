@@ -18,7 +18,7 @@ data_dir = "../data"
 
 
 while True:
-    
+
     print('Iniciando coleta dos dados')
     collect_data = Collect(years=[year], modes=["R", "S"])
     collect_data.extract_data()
@@ -30,6 +30,6 @@ while True:
     print("Carregamento dos dados finalizado")
 
     print("Interação finalizada")
-    time.sleep(60*60*24)
+    time.sleep(60*60*120)
 
 # %%
