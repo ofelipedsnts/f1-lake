@@ -219,20 +219,24 @@ ORDER BY dt_ref
 # Iniciar spark session
 spark = nekt.get_spark_session()
 
+# Buscar todas as datas disponíveis (limitado a 10 para teste)
 dates = spark.sql(date_query).toPandas()["dt_ref"].tolist()[:10]
 
-df_all = spark.sql(query.format(date=dates.pop(0)))
+# Verificar se há datas disponíveis
+if not dates:
+    raise ValueError("Nenhuma data encontrada na tabela f1_results")
 
-for dt in dates:
-    df_all = df_all.union(
-        spark.sql(query.format(date=dt))
-    )
+# Criar DataFrame com a primeira data
+df_all = spark.sql(query.format(date=dates[0]))
 
-# DF resultante da query
-df = spark.sql(query)
+# Iterar sobre as demais datas e fazer union
+for dt in dates[1:]:
+    df_temp = spark.sql(query.format(date=dt))
+    df_all = df_all.union(df_temp)
 
+# Salvar o DataFrame final (df_all, não df!)
 nekt.save_table(
-    df=df,
+    df=df_all,
     layer_name="silver",
     table_name="fs_driver_results_life",
     folder_name="f1"
