@@ -1,16 +1,20 @@
 # %%
-import nekt
 import os
 import dotenv
+import nekt
+import datetime
+from tqdm import tqdm
+from pyspark import SparkConf
 
-# %%
 dotenv.load_dotenv()
 
 NEKT_TOKEN = os.getenv("NEKT_TOKEN")
 nekt.data_access_token = NEKT_TOKEN
+
+conf = SparkConf()
+conf.set("spark.driver.memory", "2g")
+
 # %%
-
-
 # Query importada do explorer
 query = """
 SELECT 
@@ -197,10 +201,11 @@ ORDER BY driverid
 """
 
 date_query = """
-SELECT DISTINCT date(date) AS dt_ref FROM f1_results
+SELECT DISTINCT date(date) AS dt_ref FROM driver_results
+WHERE year = '{year}'
 ORDER BY dt_ref
 """
-
+# %%
 # Carregamento das tabelas necessárias
 (
     nekt.load_table(
@@ -208,37 +213,36 @@ ORDER BY dt_ref
         table_name="driver_results"
     ).createOrReplaceTempView("driver_results")
 )
-
-(
-    nekt.load_table(
-        layer_name="bronze",
-        table_name="f1_results"
-    ).createOrReplaceTempView("f1_results")
-)
-
+# %%
 # Iniciar spark session
 spark = nekt.get_spark_session()
 
-# Buscar todas as datas disponíveis (limitado a 10 para teste)
-dates = spark.sql(date_query).toPandas()["dt_ref"].tolist()[:10]
-
-# Verificar se há datas disponíveis
-if not dates:
-    raise ValueError("Nenhuma data encontrada na tabela f1_results")
-
-# Criar DataFrame com a primeira data
-df_all = spark.sql(query.format(date=dates[0]))
-
-# Iterar sobre as demais datas e fazer union
-for dt in dates[1:]:
-    df_temp = spark.sql(query.format(date=dt))
-    df_all = df_all.union(df_temp)
-
-# Salvar o DataFrame final (df_all, não df!)
-nekt.save_table(
-    df=df_all,
-    layer_name="silver",
-    table_name="fs_driver_results_life",
-    folder_name="f1"
-)
 # %%
+years = list(range(2001, (datetime.date.today().year)+1))
+years
+# %%
+for y in years:
+    # Buscar todas as datas disponíveis (limitado a 10 para teste)
+    dates = spark.sql(date_query.format(year=y)).toPandas()[
+        "dt_ref"].astype(str).tolist()
+    print(dates)
+
+    if not dates:
+        print(f"Nenhuma data encontrada para o ano {y}, pulando...")
+        continue
+
+    df_all = spark.sql(query.format(date=dates[0]))
+
+    # Iterar sobre as demais datas e fazer union
+    for dt in tqdm(dates[1:]):
+        df_temp = spark.sql(query.format(date=dt))
+        df_all = df_all.union(df_temp)
+
+    nekt.save_table(
+        df=df_all,
+        layer_name="silver",
+        table_name="fs_driver_results_life",
+        folder_name="f1"
+    )
+
+    del (df_all)

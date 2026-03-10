@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir \
     jupyter \
     pyspark>=3.3.0 \
     pandas>=2.0.0 \
-    python-dotenv>=1.0.0
+    python-dotenv>=1.0.0 \
+    tqdm>=1.0.0
 
 # Try to install Nekt SDK (optional - will not fail build if unavailable)
 RUN pip install --no-cache-dir git+https://github.com/nektcom/nekt-sdk-py.git#egg=nekt-sdk || \
