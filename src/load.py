@@ -27,27 +27,36 @@ class Load:
             region_name = "us-east-2"
         )
 
-    def upload_file(self, filename):
+    def upload_file(self, filename, folder):
+        local_path = f"{folder}/{filename}"
+        s3_key = f"{self.bucket_folder}/{filename}"
+
+        print(f"Enviando {filename}")
+
         try:
             self.s3.upload_file(
-                f"{DATA_DIR}/{filename}",
+                local_path,
                 self.bucket_name, 
-                f"{self.bucket_folder}/{filename}"
+                s3_key
             )
+            print(f"✓ {filename} enviado com sucesso")
 
         except Exception as err:
-            print(err)
+            print(f"✗ Erro ao enviar {filename}: {err}")
             return False
 
-        os.remove(f"{DATA_DIR}/{filename}")
+        os.remove(local_path)
+        print(f"✓ {filename} removido localmente")
 
         return True
     
     def proccess_data(self, folder):
+        print(f"Procurando arquivos em: {folder}")
         files = os.listdir(folder)
+        print(f"Encontrados {len(files)} arquivos")
 
         for f in tqdm(files):
-            self.upload_file(f)
+            self.upload_file(f, folder)
 # %%
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
