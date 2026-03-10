@@ -1,0 +1,9 @@
+# Core dependencies
+jupyter>=1.0.0
+pyspark>=3.3.0
+pandas>=2.0.0
+python-dotenv>=1.0.0
+
+# Nekt SDK (will try to install from GitHub)
+# If this fails, you may need to install manually with credentials:
+# pip install git+https://<your-token>@github.com/nektcom/nekt-sdk-py.git#egg=nekt-sdk
