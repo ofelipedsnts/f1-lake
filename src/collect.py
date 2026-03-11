@@ -3,8 +3,11 @@ import fastf1
 import pandas as pd
 import time
 import argparse
+from logs.logger import get_logger
 
 pd.set_option('display.max_columns', None)
+
+logger = get_logger(__name__)
 
 # %%
 
@@ -58,7 +61,7 @@ class Collect:
 
     def process_years(self):
         for year in self.years:
-            print(f"coletando dados do ano {year}")
+            logger.info(f'Coletando dados do ano {year}')
             self.process_year_modes(year)
             time.sleep(10)
 

@@ -5,6 +5,7 @@ import nekt
 import datetime
 from tqdm import tqdm
 from pyspark import SparkConf
+from logs.logger import get_logger
 
 dotenv.load_dotenv()
 
@@ -13,6 +14,8 @@ nekt.data_access_token = NEKT_TOKEN
 
 conf = SparkConf()
 conf.set("spark.driver.memory", "2g")
+
+logger = get_logger(__name__)
 
 # %%
 # Query importada do explorer
@@ -222,13 +225,12 @@ years = list(range(2001, (datetime.date.today().year)+1))
 years
 # %%
 for y in years:
-    # Buscar todas as datas disponíveis (limitado a 10 para teste)
+    # Buscar todas as datas disponíveis
     dates = spark.sql(date_query.format(year=y)).toPandas()[
         "dt_ref"].astype(str).tolist()
-    print(dates)
 
     if not dates:
-        print(f"Nenhuma data encontrada para o ano {y}, pulando...")
+        logger.warning(f"Nenhuma data encontrada para o ano {y}, pulando...")
         continue
 
     df_all = spark.sql(query.format(date=dates[0]))
