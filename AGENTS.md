@@ -1,13 +1,13 @@
 # AGENTS.md — f1-lake
 
 > Documentação de contexto para agentes de IA. Mantida atualizada a cada ciclo de desenvolvimento.
-> Última atualização: 2026-03-11
+> Última atualização: 2026-03-12
 
 ---
 
 ## Contexto da Aplicação
 
-Pipeline de dados da Fórmula 1 que coleta resultados de corridas e sprints via biblioteca `fastf1`, persiste localmente em Parquet e carrega no AWS S3. Uma camada analítica em PySpark/Nekt agrega estatísticas de pilotos e publica na camada silver do data lake. O projeto roda em loop contínuo (120h de sleep entre ciclos) e é executado dentro de um Dev Container com Python 3.9 e JDK para suporte ao Spark.
+Pipeline de dados da Fórmula 1 que coleta resultados de corridas e sprints via biblioteca `fastf1`, persiste localmente em Parquet e carrega no AWS S3. Além dos resultados agregados, o pipeline também coleta dados de voltas individuais (laps) para análises detalhadas de desempenho. Uma camada analítica em PySpark/Nekt agrega estatísticas de pilotos e publica na camada silver do data lake. O projeto roda em loop contínuo (120h de sleep entre ciclos) e é executado dentro de um Dev Container com Python 3.9 e JDK para suporte ao Spark.
 
 ---
 
@@ -19,12 +19,16 @@ f1-lake/
 │   ├── main.py          # Entry point — orquestra collect + load em loop infinito
 │   ├── collect.py       # Coleta dados via fastf1, salva como .parquet em data/
 │   ├── load.py          # Upload de .parquet para AWS S3 e remoção local
+│   ├── laps/
+│   │   ├── __init__.py  # Marca laps/ como pacote Python
+│   │   └── extract_session_laps.py  # Coleta voltas individuais (laps) por sessão
 │   └── logs/
 │       ├── __init__.py  # Marca logs/ como pacote Python
 │       └── logger.py    # Fábrica centralizada de loggers
 ├── notebooks/
 │   └── drivers_stats.py # Script analítico PySpark — gera feature store de pilotos
 ├── data/                # Staging local de arquivos .parquet (não versionado)
+│   └── laps/            # Subdiretório para dados de voltas individuais
 ├── .devcontainer/
 │   ├── Dockerfile       # Python 3.9 + JDK (para Spark)
 │   └── devcontainer.json
@@ -46,6 +50,10 @@ python src/main.py
 # Rodar apenas a coleta (CLI)
 python src/collect.py --years 2024 2025 --modes R S
 python src/collect.py --start 2021 --stop 2025
+
+# Rodar coleta de voltas individuais (laps)
+python src/laps/extract_session_laps.py --years 2024 2025 --modes R S
+python src/laps/extract_session_laps.py --start 2021 --stop 2025
 
 # Rodar apenas o upload S3
 python src/load.py --bucket_name meu-bucket --folder f1
@@ -196,6 +204,7 @@ Todos os scripts usam marcadores `# %%` para compatibilidade com Jupyter/VS Code
 
 | Data | Alteração |
 |---|---|
+| 2026-03-12 | Adicionado módulo `src/laps/` para coleta de dados de voltas individuais (laps) |
 | 2026-03-11 | Refatoração de `process` em `process`, `process_year_modes`, `process_years` com parada antecipada |
 | 2026-03-11 | Substituição de `print()` por módulo `logging` centralizado em `src/logs/logger.py` |
 | 2026-03-11 | Adicionado `pyarrow` como dependência para suporte a Parquet |
