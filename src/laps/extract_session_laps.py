@@ -26,7 +26,11 @@ class CollectLaps:
         except ValueError:
             return pd.DataFrame()
 
-        session.load()
+        try:
+            session.load()
+        except Exception as e:
+            logger.error(f"Erro ao carregar sessão {year} GP{gp} {mode}: {e}")
+            return pd.DataFrame()
 
         df = session.laps
 
@@ -37,30 +41,40 @@ class CollectLaps:
 
         return df
 
-    def save_data(self, df: pd.DataFrame, year: int, gp: int, mode: str):
-        # Ensure data/laps directory exists
-        Path("data/laps").mkdir(parents=True, exist_ok=True)
-        
-        filename = f"data/laps/{year}_{gp:02}_{mode}.parquet"
-        df.to_parquet(filename, index=False)
+    def save_data(self, df: pd.DataFrame, year: int, gp: int, mode: str) -> bool:
+        try:
+            # Ensure data/laps directory exists
+            Path("data/laps").mkdir(parents=True, exist_ok=True)
+            
+            filename = f"data/laps/{year}_{gp:02}_{mode}.parquet"
+            df.to_parquet(filename, index=False)
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao salvar arquivo {year}_{gp:02}_{mode}.parquet: {e}")
+            return False
 
     def process(self, year: int, gp: int, mode: str) -> bool:
+        logger.info(f"Processando {year} GP{gp:02} {mode}")
         df = self.get_data(year, gp, mode)
 
         if df.empty:
+            logger.warning(f"Sem dados para {year} GP{gp:02} {mode}")
             return False
 
-        self.save_data(df, year, gp, mode)
+        if not self.save_data(df, year, gp, mode):
+            return False
+        
+        logger.info(f"Sucesso ao processar {year} GP{gp:02} {mode}")
         time.sleep(1)
         return True
 
-    def process_year_modes(self, year: int):
+    def process_year_modes(self, year: int) -> None:
         for i in range(1, 30):
             for mode in self.modes:
                 if not self.process(year, i, mode) and mode == "R":
                     return
 
-    def process_years(self):
+    def process_years(self) -> None:
         for year in self.years:
             logger.info(f'Coletando voltas do ano {year}')
             self.process_year_modes(year)
@@ -86,5 +100,10 @@ if __name__ == "__main__":
         years = [i for i in range(args.start, args.stop + 1)]
         collect = CollectLaps(years, args.modes)
 
-    if collect:
-        collect.process_years()
+    # Guard clause: prevent crash when no args provided
+    if not collect:
+        logger.error("Nenhum argumento fornecido. Use --years ou --start/--stop")
+        parser.print_help()
+        exit(1)
+
+    collect.process_years()
