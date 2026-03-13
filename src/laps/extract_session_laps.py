@@ -1,7 +1,12 @@
 # %%
+import sys
+from pathlib import Path
+
+# Adiciona src/ ao path ANTES de importar módulos locais
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import time
 import argparse
-from pathlib import Path
 
 import fastf1
 import pandas as pd
@@ -43,7 +48,6 @@ class CollectLaps:
 
     def save_data(self, df: pd.DataFrame, year: int, gp: int, mode: str) -> bool:
         try:
-            # Ensure data/laps directory exists
             Path("data/laps").mkdir(parents=True, exist_ok=True)
             
             filename = f"data/laps/{year}_{gp:02}_{mode}.parquet"
